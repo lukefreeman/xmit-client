@@ -34,6 +34,10 @@ const args = [
   'src/index.ts',
   '--compile',
   '--minify',
+  // ink only imports this behind a DEV-only dynamic import; keep the bundler
+  // from resolving it (it isn't installed).
+  '--external',
+  'react-devtools-core',
   ...(target ? ['--target', target] : []),
   ...defines,
   '--outfile',
