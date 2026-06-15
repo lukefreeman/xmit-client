@@ -1,0 +1,35 @@
+{
+  "name": "xmit",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "XMIT — an underground terminal music station. Tune into label stations, stream releases, see who's listening, chat live.",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outfile dist/xmit.js --target bun",
+    "typecheck": "tsc --noEmit",
+    "compile": "bun run scripts/compile.ts",
+    "compile:all": "bun run compile:darwin-arm64 && bun run compile:darwin-x64 && bun run compile:linux-x64 && bun run compile:linux-arm64 && bun run compile:windows-x64",
+    "compile:darwin-arm64": "bun run scripts/compile.ts bun-darwin-arm64 dist/xmit-macos-arm64",
+    "compile:darwin-x64": "bun run scripts/compile.ts bun-darwin-x64 dist/xmit-macos-x64",
+    "compile:linux-x64": "bun run scripts/compile.ts bun-linux-x64 dist/xmit-linux-x64",
+    "compile:linux-arm64": "bun run scripts/compile.ts bun-linux-arm64 dist/xmit-linux-arm64",
+    "compile:windows-x64": "bun run scripts/compile.ts bun-windows-x64 dist/xmit-windows-x64.exe",
+    "fetch-mpv": "bun run scripts/fetch-mpv.ts",
+    "package": "bun run scripts/package.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "ably": "^2.6.5",
+    "ink": "^5.0.1",
+    "ink-text-input": "^6.0.0",
+    "music-metadata": "^11.13.0",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.13",
+    "@types/react": "^18.3.12",
+    "typescript": "^5.6.3"
+  }
+}

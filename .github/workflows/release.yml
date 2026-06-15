@@ -1,0 +1,69 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write # create the GitHub Release
+
+jobs:
+  release:
+    # macOS runner so we can codesign + notarize; Bun cross-compiles the rest.
+    runs-on: macos-14
+    env:
+      # public config baked into the binaries (no secrets here)
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      XMIT_SERVER_URL: ${{ secrets.XMIT_SERVER_URL }}
+      # signing (optional — steps skip if DEVELOPER_ID_APP is unset)
+      DEVELOPER_ID_APP: ${{ secrets.DEVELOPER_ID_APP }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+
+      - name: Compile binaries (config baked, no Ably secret)
+        run: bun run compile:all
+
+      - name: Fetch bundled mpv
+        run: bun run fetch-mpv macos-arm64 macos-x64 windows-x64
+
+      - name: Package release archives
+        run: bun run package
+
+      - name: Sign + notarize macOS
+        if: ${{ env.DEVELOPER_ID_APP != '' }}
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          NOTARY_PROFILE: xmit-notary
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/xmit.keychain-db"
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
+          xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" --keychain "$KEYCHAIN"
+          scripts/macos/sign.sh release/xmit-macos-arm64
+          scripts/macos/sign.sh release/xmit-macos-x64
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/xmit-*.zip
+          generate_release_notes: true

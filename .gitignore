@@ -1,0 +1,15 @@
+node_modules/
+dist/
+release/
+vendor/mpv/*/
+.env
+*.log
+.DS_Store
+bun.lock
+
+# Private token server — kept out of the public client repo (has its own repo)
+server/
+
+# Claude Code files — not part of the public client
+.claude/
+CLAUDE.md

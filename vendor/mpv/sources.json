@@ -1,0 +1,8 @@
+{
+  "_comment": "Each platform: a direct {url}, OR {github,tag,match} that resolves the CURRENT release asset by name (handles mpv's rolling nightly 'git-release' builds). Run `bun run fetch-mpv` (or `--dry` to just print URLs). See README.md. Note: macos-x64 needs macOS 15+, macos-arm64 needs macOS 14+. Linux isn't on mpv git-release — supply a static build / AppImage URL yourself.",
+  "macos-arm64": { "github": "mpv-player/mpv", "tag": "git-release", "match": "macos-14-arm.zip", "archive": "zip" },
+  "macos-x64": { "github": "mpv-player/mpv", "tag": "git-release", "match": "macos-15-intel.zip", "archive": "zip" },
+  "windows-x64": { "github": "mpv-player/mpv", "tag": "git-release", "match": "x86_64-pc-windows-msvc.zip", "archive": "zip" },
+  "linux-x64": { "url": "", "archive": "tar.gz" },
+  "linux-arm64": { "url": "", "archive": "tar.gz" }
+}
