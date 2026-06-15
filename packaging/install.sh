@@ -2,12 +2,12 @@
 # XMIT installer. Downloads the right release for this machine, installs it
 # (binary + bundled mpv together), and symlinks `xmit` onto PATH.
 #
-#   curl -fsSL https://raw.githubusercontent.com/YOU/xmit/main/packaging/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/lukefreeman/xmit-client/main/packaging/install.sh | sh
 #
 # Overrides: XMIT_REPO (owner/repo), XMIT_HOME (install dir), XMIT_BIN (symlink dir).
 set -eu
 
-REPO="${XMIT_REPO:-YOU/xmit}"
+REPO="${XMIT_REPO:-lukefreeman/xmit-client}"
 HOME_DIR="${XMIT_HOME:-$HOME/.xmit}"
 BIN_DIR="${XMIT_BIN:-$HOME/.local/bin}"
 

@@ -37,11 +37,11 @@ Gatekeeper once (right-click → Open).
 
 ## Homebrew tap (`homebrew/xmit.rb`)
 
-Create a repo `github.com/<you>/homebrew-xmit`, copy `xmit.rb` to
+Create a repo `github.com/lukefreeman/homebrew-xmit`, copy `xmit.rb` to
 `Formula/xmit.rb`, fill in the release URLs + sha256s (`shasum -a 256 …`). Then:
 
 ```bash
-brew install <you>/xmit/xmit      # and `brew upgrade` handles updates
+brew install lukefreeman/xmit/xmit      # and `brew upgrade` handles updates
 ```
 
 ## curl installer (`install.sh`)
@@ -49,10 +49,10 @@ brew install <you>/xmit/xmit      # and `brew upgrade` handles updates
 Host it (it can live in the repo) and users run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<you>/xmit/main/packaging/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/lukefreeman/xmit-client/main/packaging/install.sh | sh
 ```
 
 Installs to `~/.xmit` (binary + mpv together) and symlinks `~/.local/bin/xmit`.
 
-> Replace `YOU`/`<you>` placeholders with your GitHub org/user in `xmit.rb`,
-> `install.sh`, and the formula URLs.
+> Per release, update the `version`, release URLs, and sha256s in `xmit.rb`
+> (`shasum -a 256 release/xmit-*.zip`).
