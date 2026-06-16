@@ -28,16 +28,15 @@ for (const [k, v] of Object.entries(PUBLIC)) {
 }
 // never ship the Ably secret in a binary
 defines.push('--define', 'process.env.ABLY_API_KEY=""')
+// eliminate ink's DEV-only devtools branch so its react-devtools-core import
+// (not installed) is dropped from the bundle instead of crashing at launch.
+defines.push('--define', 'process.env.DEV="false"')
 
 const args = [
   'build',
   'src/index.ts',
   '--compile',
   '--minify',
-  // ink only imports this behind a DEV-only dynamic import; keep the bundler
-  // from resolving it (it isn't installed).
-  '--external',
-  'react-devtools-core',
   ...(target ? ['--target', target] : []),
   ...defines,
   '--outfile',
