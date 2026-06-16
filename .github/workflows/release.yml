@@ -34,6 +34,8 @@ jobs:
         run: bun run compile:all
 
       - name: Fetch bundled mpv
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run fetch-mpv macos-arm64 macos-x64 windows-x64
 
       - name: Package release archives

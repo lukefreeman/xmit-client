@@ -28,6 +28,10 @@ const ids = Object.keys(sources).filter((id) => !id.startsWith('_') && (only.len
 
 const releaseCache = new Map<string, { assets?: Array<{ name?: string; browser_download_url?: string }> }>()
 
+// authenticated calls dodge the unauthenticated api.github.com rate limit (60/hr
+// per IP), which CI runners share and routinely hit.
+const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || ''
+
 async function resolveUrl(e: Entry): Promise<string | null> {
   if (e.url) return e.url
   if (!e.github || !e.match) return null
@@ -36,9 +40,12 @@ async function resolveUrl(e: Entry): Promise<string | null> {
     const api = e.tag
       ? `https://api.github.com/repos/${e.github}/releases/tags/${e.tag}`
       : `https://api.github.com/repos/${e.github}/releases/latest`
-    const res = await fetch(api, { headers: { 'user-agent': 'xmit-fetch-mpv', accept: 'application/vnd.github+json' } })
+    const headers: Record<string, string> = { 'user-agent': 'xmit-fetch-mpv', accept: 'application/vnd.github+json' }
+    if (token) headers.authorization = `Bearer ${token}`
+    const res = await fetch(api, { headers })
     if (!res.ok) {
-      console.warn(`  github api ${res.status} for ${e.github}`)
+      const hint = res.status === 403 && !token ? ' (rate-limited — set GITHUB_TOKEN)' : ''
+      console.warn(`  github api ${res.status} for ${e.github}${hint}`)
       return null
     }
     releaseCache.set(key, (await res.json()) as { assets?: Array<{ name?: string; browser_download_url?: string }> })
@@ -47,12 +54,23 @@ async function resolveUrl(e: Entry): Promise<string | null> {
   return asset?.browser_download_url ?? null
 }
 
+// a source is "configured" if it names an explicit url or a github+match to
+// resolve. an unconfigured entry (e.g. linux's empty url) is an expected skip;
+// a configured one that fails is a real error and fails the run.
+const failed: string[] = []
+
 for (const id of ids) {
   const raw = sources[id]
   const e: Entry = typeof raw === 'object' ? raw : {}
+  const configured = Boolean(e.url) || Boolean(e.github && e.match)
   const url = await resolveUrl(e)
   if (!url) {
-    console.warn(`• ${id}: no url / no matching GitHub asset ("${e.match ?? ''}") — skip`)
+    if (configured) {
+      console.warn(`✕ ${id}: configured source did not resolve (asset "${e.match ?? e.url}")`)
+      failed.push(id)
+    } else {
+      console.warn(`• ${id}: no source configured — skip`)
+    }
     continue
   }
   if (dry) {
@@ -70,7 +88,8 @@ for (const id of ids) {
   console.log(`→ ${id}: downloading ${url}`)
   let r = spawnSync('curl', ['-fSL', '-o', tmp, url], { stdio: 'inherit' })
   if (r.status !== 0) {
-    console.warn(`• ${id}: download failed`)
+    console.warn(`✕ ${id}: download failed`)
+    failed.push(id)
     continue
   }
 
@@ -81,7 +100,8 @@ for (const id of ids) {
       : spawnSync('tar', ['-xzf', tmp, '-C', outDir], { stdio: 'inherit' })
   rmSync(tmp, { force: true })
   if (r.status !== 0) {
-    console.warn(`• ${id}: extract failed`)
+    console.warn(`✕ ${id}: extract failed`)
+    failed.push(id)
     continue
   }
 
@@ -93,7 +113,18 @@ for (const id of ids) {
       rmSync(inner, { force: true })
     }
   }
+
+  // confirm something landed, so an empty extract can't pass as success.
+  if (readdirSync(outDir).filter((f) => f !== 'README.md').length === 0) {
+    console.warn(`✕ ${id}: nothing extracted`)
+    failed.push(id)
+    continue
+  }
   console.log(`✓ ${id}: mpv ready in ${outDir}`)
 }
 
 console.log('done.')
+if (!dry && failed.length) {
+  console.error(`✕ failed to fetch mpv for: ${failed.join(', ')}`)
+  process.exit(1)
+}
