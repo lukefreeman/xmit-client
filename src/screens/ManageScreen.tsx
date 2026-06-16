@@ -25,6 +25,8 @@ import { uploadAudio, deleteAudio } from '../lib/upload.js'
 import { accentColor } from '../lib/color.js'
 import type { Label, Release, Track, User } from '../types/index.js'
 
+const MAX_TRACKS_PER_RELEASE = 10
+
 type View =
   | 'list'
   | 'newStation'
@@ -201,11 +203,22 @@ export function ManageScreen({ user, onExit }: Props): React.ReactElement {
     setBusy(true)
     setError(null)
     setInfo(null)
-    setUploads(files.map((f) => ({ name: basename(f), status: 'queued' })))
-    const patch = (i: number, row: Partial<UploadRow>): void =>
-      setUploads((u) => u.map((x, idx) => (idx === i ? { ...x, ...row } : x)))
     try {
       const existing = await fetchTracks(release.id)
+      const room = MAX_TRACKS_PER_RELEASE - existing.length
+      if (room <= 0) {
+        setError(`Release is full — max ${MAX_TRACKS_PER_RELEASE} tracks`)
+        return
+      }
+      if (files.length > room) {
+        setError(
+          `Too many tracks — ${files.length} found, room for ${room} more (max ${MAX_TRACKS_PER_RELEASE} per release)`,
+        )
+        return
+      }
+      setUploads(files.map((f) => ({ name: basename(f), status: 'queued' })))
+      const patch = (i: number, row: Partial<UploadRow>): void =>
+        setUploads((u) => u.map((x, idx) => (idx === i ? { ...x, ...row } : x)))
       let n = existing.length
       for (let i = 0; i < files.length; i++) {
         const f = files[i]!
