@@ -17,7 +17,7 @@ export function Logo({ accent = accentColor(theme.accent) }: { accent?: string }
           {line}
         </Text>
       ))}
-      <Text color={theme.dim}>· underground radio · pirate terminal ·</Text>
+      <Text color={theme.dim}>· underground terminal radio ·</Text>
     </Box>
   )
 }

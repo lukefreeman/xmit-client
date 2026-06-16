@@ -129,7 +129,7 @@ export function AuthScreen({ onAuthed, onQuit }: Props): React.ReactElement {
           />
         </Field>
 
-        <Box marginTop={1}>
+        <Box marginTop={1} justifyContent="center">
           {busy ? (
             <Text color={accentColor(theme.accent)}>· connecting…</Text>
           ) : error ? (

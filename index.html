@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>XMIT · underground radio · pirate terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #070908;
+    --bg-2: #0b0e0c;
+    --green: #2fe6a0;
+    --green-dim: #1f9b6d;
+    --green-faint: rgba(47, 230, 160, 0.32);
+    --border: rgba(47, 230, 160, 0.55);
+    --border-faint: rgba(47, 230, 160, 0.18);
+    --fg: #d6ddd8;
+    --dim: #79847d;
+    --dimmer: #4d564f;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --pixel: 'Silkscreen', var(--mono);
+    --maxw: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* faint CRT scanline + vignette overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.018) 0px,
+        rgba(255,255,255,0.018) 1px,
+        transparent 1px,
+        transparent 3px
+      ),
+      radial-gradient(120% 120% at 50% 0%, transparent 55%, rgba(0,0,0,0.55) 100%);
+  }
+
+  a { color: var(--green); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  .label {
+    color: var(--green);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+  .dim { color: var(--dim); }
+  .dot { color: var(--dimmer); }
+
+  /* ---------- top status bar ---------- */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(7,9,8,0.86);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border-faint);
+  }
+  .topbar-inner {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 14px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: 0.16em;
+    font-weight: 700;
+  }
+  .brand .diamond { color: var(--green); }
+  .brand .name { color: var(--fg); }
+  .topnav {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    color: var(--dim);
+  }
+  .topnav a { color: var(--dim); }
+  .topnav a:hover { color: var(--green); text-decoration: none; }
+  .online {
+    display: flex; align-items: center; gap: 8px; color: var(--dim);
+  }
+  .online .pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  /* ---------- hero ---------- */
+  .hero {
+    min-height: calc(100vh - 53px);
+    display: flex;
+    align-items: center;
+    padding: 60px 0;
+    text-align: center;
+  }
+  .logo {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+  }
+  .logo svg {
+    width: clamp(248px, 42vw, 432px);
+    height: auto;
+    fill: var(--green);
+    filter: drop-shadow(0 0 22px rgba(47,230,160,0.4));
+    animation: logoBreathe 4.5s ease-in-out infinite;
+  }
+  @keyframes logoBreathe {
+    0%, 100% { filter: drop-shadow(0 0 16px rgba(47,230,160,0.3)); }
+    50%      { filter: drop-shadow(0 0 30px rgba(47,230,160,0.6)); }
+  }
+  /* entrance: pixels lock in like an incoming signal */
+  .logo svg.anim rect {
+    opacity: 0;
+    animation: pxOn 0.42s steps(2, end) forwards;
+  }
+  @keyframes pxOn {
+    0%   { opacity: 0; }
+    50%  { opacity: 0.45; }
+    100% { opacity: 1; }
+  }
+  /* faint ongoing signal flicker on tagged pixels */
+  .logo svg.anim rect.flick {
+    animation: pxOn 0.42s steps(2, end) forwards, pxFlicker 3.6s ease-in-out infinite;
+  }
+  @keyframes pxFlicker {
+    0%, 92%, 100% { opacity: 1; }
+    94%           { opacity: 0.35; }
+    96%           { opacity: 1; }
+  }
+  .tagline {
+    margin: 24px 0 0;
+    color: var(--dim);
+    font-size: clamp(15px, 2.4vw, 15px);
+    letter-spacing: 0.06em;
+  }
+  .tagline .sep { color: var(--dimmer); }
+
+  /* install command block */
+  .install {
+    margin: 56px auto 0;
+    max-width: 720px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-2);
+    text-align: left;
+    box-shadow: 0 0 0 1px rgba(47,230,160,0.05), 0 24px 60px -30px rgba(47,230,160,0.4);
+  }
+  .install-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-faint);
+    font-size: 13px;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+  }
+  .install-head .lhs { display:flex; align-items:center; gap: 10px; }
+  .install-head .tag {
+    color: var(--green); border:1px solid var(--border-faint);
+    padding: 1px 8px; border-radius: 4px; font-size: 12px;
+  }
+  .install-body {
+    display: flex; align-items: stretch; gap: 14px;
+    padding: 22px 18px;
+  }
+  .install-cmd {
+    flex: 1; min-width: 0;
+    display: flex; align-items: baseline; gap: 12px;
+    font-size: clamp(13px, 1.9vw, 16px);
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 4px;
+  }
+  .install-cmd::-webkit-scrollbar { height: 6px; }
+  .install-cmd::-webkit-scrollbar-thumb { background: var(--border-faint); border-radius: 3px; }
+  .prompt { color: var(--green); font-weight: 700; user-select: none; }
+  .cmd-text { color: var(--fg); }
+  .cmd-text .flag { color: var(--green-dim); }
+
+  .copy-btn {
+    flex: none;
+    align-self: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--bg);
+    background: var(--green);
+    border: none;
+    border-radius: 5px;
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+  .copy-btn:hover { background: #54f0b6; }
+  .copy-btn:active { transform: translateY(1px); }
+  .copy-btn.copied { background: var(--green-dim); color: var(--fg); }
+
+  .hero-sub {
+    margin: 26px 0 0;
+    color: var(--dimmer);
+    font-size: 14px;
+    letter-spacing: 0.04em;
+  }
+  .hero-sub b { color: var(--dim); font-weight: 500; }
+
+  /* ---------- section scaffolding ---------- */
+  section { padding: 78px 0; }
+  .sec-head {
+    display: flex; align-items: baseline; gap: 14px;
+    margin: 0 0 40px;
+    border-bottom: 1px solid var(--border-faint);
+    padding-bottom: 14px;
+  }
+  .sec-head h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--green);
+  }
+  .sec-head .count { color: var(--dimmer); font-size: 14px; }
+
+  /* ---------- features grid ---------- */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+  .feature {
+    border: 1px solid var(--border-faint);
+    border-radius: 8px;
+    padding: 26px 26px 30px;
+    background: linear-gradient(180deg, rgba(47,230,160,0.018), transparent);
+    transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .feature:hover { border-color: var(--border); transform: translateY(-2px); }
+  .feature .marker { color: var(--green); font-weight: 700; }
+  .feature h3 {
+    margin: 14px 0 8px;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--fg);
+    letter-spacing: 0.01em;
+  }
+  .feature p { margin: 0; color: var(--dim); font-size: 15px; }
+
+  /* ---------- glimpse / screenshots ---------- */
+  .shots { display: flex; flex-direction: column; gap: 26px; }
+  .shot {
+    border: 1px solid var(--border-faint);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+  }
+  .shot-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-faint);
+    font-size: 13px; color: var(--dim); letter-spacing: 0.08em;
+  }
+  .shot-bar .lights { display:flex; gap:6px; }
+  .shot-bar .lights i { width:10px; height:10px; border-radius:50%; display:block; }
+  .shot-bar .lights i:nth-child(1){ background:#33392f; }
+  .shot-bar .lights i:nth-child(2){ background:#33392f; }
+  .shot-bar .lights i:nth-child(3){ background:var(--green-dim); }
+  .shot-bar .title { margin-left: 6px; }
+  .shot img { display: block; width: 100%; height: auto; }
+
+  /* ---------- quickstart transcript ---------- */
+  .terminal {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-2);
+    padding: 26px 26px 30px;
+    font-size: 15px;
+    line-height: 1.9;
+  }
+  .terminal .line { white-space: pre-wrap; }
+  .terminal .p { color: var(--green); font-weight: 700; }
+  .terminal .cmt { color: var(--dimmer); }
+  .terminal .ok { color: var(--green); }
+  .terminal .out { color: var(--dim); }
+  .terminal .blink {
+    display: inline-block; width: 9px; height: 1.05em; vertical-align: -2px;
+    background: var(--green); margin-left: 2px;
+    animation: blink 1.1s steps(1) infinite;
+  }
+  @keyframes blink { 0%,50%{opacity:1;} 50.01%,100%{opacity:0;} }
+
+  .req {
+    margin-top: 26px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .req div {
+    border: 1px solid var(--border-faint);
+    border-radius: 8px;
+    padding: 18px 20px;
+  }
+  .req .k { color: var(--dim); font-size: 13px; letter-spacing: 0.1em; }
+  .req .v { color: var(--fg); font-size: 16px; margin-top: 4px; }
+
+  /* ---------- final CTA ---------- */
+  .cta {
+    text-align: center;
+    border-top: 1px solid var(--border-faint);
+    margin-top: 30px;
+  }
+  .cta h2 {
+    font-family: var(--mono);
+    font-weight: 700;
+    color: var(--green);
+    font-size: clamp(32px, 6vw, 56px);
+    letter-spacing: 0.04em;
+    margin: 0 0 8px;
+    text-shadow: 0 0 24px rgba(47,230,160,0.3);
+  }
+  .cta p { color: var(--dim); margin: 0 0 34px; }
+
+  /* ---------- footer ---------- */
+  footer {
+    border-top: 1px solid var(--border-faint);
+    padding: 28px 0 60px;
+    color: var(--dimmer);
+    font-size: 13px;
+  }
+  .foot-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .foot-inner a { color: var(--dim); }
+  .foot-inner a:hover { color: var(--green); text-decoration: none; }
+
+  @media (max-width: 760px) {
+    .topnav a:not(.gh) { display: none; }
+    .features { grid-template-columns: 1fr; }
+    .req { grid-template-columns: 1fr; }
+    .install-body { flex-direction: column; align-items: stretch; }
+    .copy-btn { align-self: stretch; padding: 12px; }
+    .hero { padding: 70px 0 56px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .online .pulse, .terminal .blink { animation: none; }
+    .logo svg, .logo svg.anim rect, .logo svg.anim rect.flick { animation: none; opacity: 1; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ===== top bar ===== -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="name">XMIT</span>
+      </div>
+      <nav class="topnav">
+        <a class="gh" href="https://github.com/lukefreeman/xmit-client" target="_blank" rel="noopener">github &#8599;</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== hero ===== -->
+  <main>
+    <section class="hero" id="install">
+      <div class="wrap">
+        <h1 class="logo" aria-label="XMIT">
+          <svg viewBox="0 0 21 6" role="img" aria-hidden="true"><rect x="0.14" y="0.14" width="0.72" height="0.72"/><rect x="4.14" y="0.14" width="0.72" height="0.72"/><rect x="6.14" y="0.14" width="0.72" height="0.72"/><rect x="10.14" y="0.14" width="0.72" height="0.72"/><rect x="12.14" y="0.14" width="0.72" height="0.72"/><rect x="13.14" y="0.14" width="0.72" height="0.72"/><rect x="14.14" y="0.14" width="0.72" height="0.72"/><rect x="16.14" y="0.14" width="0.72" height="0.72"/><rect x="17.14" y="0.14" width="0.72" height="0.72"/><rect x="18.14" y="0.14" width="0.72" height="0.72"/><rect x="19.14" y="0.14" width="0.72" height="0.72"/><rect x="20.14" y="0.14" width="0.72" height="0.72"/><rect x="1.14" y="1.14" width="0.72" height="0.72"/><rect x="3.14" y="1.14" width="0.72" height="0.72"/><rect x="6.14" y="1.14" width="0.72" height="0.72"/><rect x="7.14" y="1.14" width="0.72" height="0.72"/><rect x="9.14" y="1.14" width="0.72" height="0.72"/><rect x="10.14" y="1.14" width="0.72" height="0.72"/><rect x="13.14" y="1.14" width="0.72" height="0.72"/><rect x="18.14" y="1.14" width="0.72" height="0.72"/><rect x="2.14" y="2.14" width="0.72" height="0.72"/><rect x="6.14" y="2.14" width="0.72" height="0.72"/><rect x="8.14" y="2.14" width="0.72" height="0.72"/><rect x="10.14" y="2.14" width="0.72" height="0.72"/><rect x="13.14" y="2.14" width="0.72" height="0.72"/><rect x="18.14" y="2.14" width="0.72" height="0.72"/><rect x="2.14" y="3.14" width="0.72" height="0.72"/><rect x="6.14" y="3.14" width="0.72" height="0.72"/><rect x="8.14" y="3.14" width="0.72" height="0.72"/><rect x="10.14" y="3.14" width="0.72" height="0.72"/><rect x="13.14" y="3.14" width="0.72" height="0.72"/><rect x="18.14" y="3.14" width="0.72" height="0.72"/><rect x="1.14" y="4.14" width="0.72" height="0.72"/><rect x="3.14" y="4.14" width="0.72" height="0.72"/><rect x="6.14" y="4.14" width="0.72" height="0.72"/><rect x="10.14" y="4.14" width="0.72" height="0.72"/><rect x="13.14" y="4.14" width="0.72" height="0.72"/><rect x="18.14" y="4.14" width="0.72" height="0.72"/><rect x="0.14" y="5.14" width="0.72" height="0.72"/><rect x="4.14" y="5.14" width="0.72" height="0.72"/><rect x="6.14" y="5.14" width="0.72" height="0.72"/><rect x="10.14" y="5.14" width="0.72" height="0.72"/><rect x="12.14" y="5.14" width="0.72" height="0.72"/><rect x="13.14" y="5.14" width="0.72" height="0.72"/><rect x="14.14" y="5.14" width="0.72" height="0.72"/><rect x="18.14" y="5.14" width="0.72" height="0.72"/></svg>
+        </h1>
+        <p class="tagline">
+          <span class="sep">&middot;</span> underground terminal radio
+          <span class="sep">&middot;</span>
+        </p>
+
+        <div class="install">
+          <div class="install-head">
+            <span class="lhs"><span class="tag">install</span></span>
+            <span>sh</span>
+          </div>
+          <div class="install-body">
+            <div class="install-cmd">
+              <span class="prompt">$</span>
+              <span class="cmd-text" id="cmd">curl <span class="flag">-fsSL</span> https://raw.githubusercontent.com/lukefreeman/xmit-client/main/packaging/install.sh | sh</span>
+            </div>
+            <button class="copy-btn" id="copyBtn" aria-label="Copy install command">COPY</button>
+          </div>
+        </div>
+
+        <p class="hero-sub">
+          runs in your terminal &middot; <b>macOS</b> &amp; <b>Linux</b> &middot; no signup to install
+        </p>
+        <p class="hero-sub" style="margin-top:14px;">
+          <a href="https://github.com/lukefreeman/xmit-client" target="_blank" rel="noopener">source on github &#8599;</a>
+        </p>
+      </div>
+    </section>
+  </main>
+
+
+<script>
+  var INSTALL_CMD = "curl -fsSL https://raw.githubusercontent.com/lukefreeman/xmit-client/main/packaging/install.sh | sh";
+
+  function wireCopy(btnId) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      var done = function () {
+        btn.classList.add("copied");
+        var prev = btn.textContent;
+        btn.textContent = "COPIED \u2713";
+        setTimeout(function () {
+          btn.classList.remove("copied");
+          btn.textContent = "COPY";
+        }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(INSTALL_CMD).then(done, fallback);
+      } else {
+        fallback();
+      }
+      function fallback() {
+        var ta = document.createElement("textarea");
+        ta.value = INSTALL_CMD;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(ta);
+        done();
+      }
+    });
+  }
+  wireCopy("copyBtn");
+
+  // animate the XMIT wordmark: pixels lock in left-to-right like an incoming signal
+  (function () {
+    var svg = document.querySelector(".logo svg");
+    if (!svg) return;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    var rects = Array.prototype.slice.call(svg.querySelectorAll("rect"));
+    svg.classList.add("anim");
+    var maxDelay = 0;
+    rects.forEach(function (r) {
+      var x = parseFloat(r.getAttribute("x")) || 0;
+      var d = x * 0.05 + Math.random() * 0.07;
+      if (d > maxDelay) maxDelay = d;
+      r.style.animationDelay = d.toFixed(3) + "s";
+    });
+    // once locked in, let every pixel flash randomly, each on its own clock
+    setTimeout(function () {
+      rects.forEach(function (r) {
+        r.classList.add("flick");
+        var dur = (2 + Math.random() * 5).toFixed(2);      // 2s–7s cycle
+        var off = (Math.random() * dur).toFixed(2);        // random phase
+        r.style.animationDuration = "0.42s, " + dur + "s";
+        r.style.animationDelay = "0s, " + off + "s";
+      });
+    }, (maxDelay + 0.5) * 1000);
+  })();
+</script>
+</body>
+</html>

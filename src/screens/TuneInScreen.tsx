@@ -43,7 +43,6 @@ export function TuneInScreen({ user, label, onLeave, onQuit }: Props): React.Rea
   const [paused, setPaused] = useState(false)
   const [volume, setVolume] = useState(100)
   const [bitrate, setBitrate] = useState(0)
-  const [frame, setFrame] = useState(0)
 
   const [members, setMembers] = useState<PresenceMember[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -95,14 +94,8 @@ export function TuneInScreen({ user, label, onLeave, onQuit }: Props): React.Rea
     }
   }, [releases, releaseIndex])
 
-  // EQ animation ticker
-  useEffect(() => {
-    if (!playing || paused || !mpv.available) return
-    const id = setInterval(() => setFrame((f) => f + 1), 90)
-    return () => clearInterval(id)
-  }, [playing, paused])
-
-  // mpv progress poller
+  // poll mpv for playback progress. the rendered output only changes ~1×/sec
+  // (clock + progress bar), so ink writes rarely and the screen stays still.
   useEffect(() => {
     if (!playing || !mpv.available) return
     const id = setInterval(async () => {
@@ -259,15 +252,14 @@ export function TuneInScreen({ user, label, onLeave, onQuit }: Props): React.Rea
   const release = releases[releaseIndex]
   const listening = members.length
 
-  // fixed-width left column; right takes the rest
+  // fixed-width left column (releases / tracks / now-playing); right takes the rest
   const leftW = Math.max(34, Math.min(56, Math.floor(cols * 0.36)))
   const leftInner = leftW - 4 // minus border + paddingX
   const rightW = cols - leftW - 1
-  const npBoxW = Math.max(24, Math.floor((rightW - 1) * 0.62))
-  const lpBoxW = rightW - 1 - npBoxW
-  const npInner = npBoxW - 4
-  const lpInner = lpBoxW - 4
-  const NOW_PLAYING_ROWS = 11
+  // right column: listening + chat side by side
+  const listenW = Math.max(22, Math.min(40, Math.floor(rightW * 0.4)))
+  const listenInner = listenW - 4
+  const NOW_PLAYING_ROWS = 8
 
   return (
     <Box flexDirection="column" height={rows - 1}>
@@ -299,40 +291,39 @@ export function TuneInScreen({ user, label, onLeave, onQuit }: Props): React.Rea
             accent={accent}
             width={leftInner}
           />
+          <Box height={NOW_PLAYING_ROWS} flexShrink={0}>
+            <NowPlaying
+              track={playing}
+              releaseTitle={release?.title ?? ''}
+              labelName={label.name}
+              position={position}
+              duration={duration}
+              paused={paused}
+              bitrate={bitrate}
+              accent={accent}
+              mpvAvailable={mpv.available}
+              width={leftInner}
+              grow
+            />
+          </Box>
         </Box>
 
-        <Box flexDirection="column" flexGrow={1} marginLeft={1}>
-          <Box flexDirection="row" height={NOW_PLAYING_ROWS}>
-            <Box width={npBoxW}>
-              <NowPlaying
-                track={playing}
-                releaseTitle={release?.title ?? ''}
-                labelName={label.name}
-                position={position}
-                duration={duration}
-                paused={paused}
-                bitrate={bitrate}
-                frame={frame}
-                accent={accent}
-                mpvAvailable={mpv.available}
-                width={npInner}
-                grow
-              />
-            </Box>
-            <Box width={lpBoxW} marginLeft={1}>
-              <ListeningPanel members={members} selfHandle={user.handle} accent={accent} width={lpInner} />
-            </Box>
+        <Box flexDirection="row" flexGrow={1} marginLeft={1}>
+          <Box width={listenW} flexShrink={0}>
+            <ListeningPanel members={members} selfHandle={user.handle} accent={accent} width={listenInner} />
           </Box>
-          <Chat
-            messages={messages}
-            draft={draft}
-            onChange={setDraft}
-            onSubmit={sendChat}
-            focused={focus === 'chat'}
-            selfHandle={user.handle}
-            accent={accent}
-            slug={label.slug}
-          />
+          <Box flexGrow={1} marginLeft={1}>
+            <Chat
+              messages={messages}
+              draft={draft}
+              onChange={setDraft}
+              onSubmit={sendChat}
+              focused={focus === 'chat'}
+              selfHandle={user.handle}
+              accent={accent}
+              slug={label.slug}
+            />
+          </Box>
         </Box>
       </Box>
 

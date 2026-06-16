@@ -1,7 +1,6 @@
 import React from 'react'
 import { Box, Text } from 'ink'
 import { Panel } from './Panel.js'
-import { Waveform } from './Waveform.js'
 import { theme } from '../theme.js'
 import { fmtTime, audioFormat } from '../lib/format.js'
 import type { Track } from '../types/index.js'
@@ -14,7 +13,6 @@ interface Props {
   duration: number
   paused: boolean
   bitrate: number // kbps, 0 if unknown
-  frame: number // EQ animation tick
   accent: string
   mpvAvailable: boolean
   width: number // inner content width
@@ -52,7 +50,6 @@ export function NowPlaying({
   duration,
   paused,
   bitrate,
-  frame,
   accent,
   mpvAvailable,
   width,
@@ -91,17 +88,6 @@ export function NowPlaying({
           <Text color={theme.muted}>{fmtTime(dur)}</Text>
         </Box>
         <ProgressBar position={position} duration={dur} accent={accent} width={width - 1} />
-      </Box>
-
-      <Box marginTop={1}>
-        <Waveform
-          frame={frame}
-          playing={playing}
-          paused={paused}
-          accent={accent}
-          bars={Math.max(8, Math.floor(width / 2))}
-          height={2}
-        />
       </Box>
     </Panel>
   )

@@ -31,6 +31,8 @@ jobs:
       - run: bun install
 
       - name: Compile binaries (config baked, no Ably secret)
+        env:
+          XMIT_VERSION: ${{ github.ref_name }} # tag name, baked for the update check
         run: bun run compile:all
 
       - name: Fetch bundled mpv

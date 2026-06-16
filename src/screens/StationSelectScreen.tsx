@@ -11,13 +11,14 @@ import type { Label, User } from '../types/index.js'
 interface Props {
   user: User
   online?: number
+  update?: string | null // newer version available, if any
   onTuneIn: (label: Label) => void
   onLogout: () => void
   onManage: () => void
   onQuit: () => void
 }
 
-export function StationSelectScreen({ user, online, onTuneIn, onLogout, onManage, onQuit }: Props): React.ReactElement {
+export function StationSelectScreen({ user, online, update, onTuneIn, onLogout, onManage, onQuit }: Props): React.ReactElement {
   const { stdout } = useStdout()
   const rows = stdout?.rows ?? 30
   const accent = accentColor(theme.accent)
@@ -84,6 +85,13 @@ export function StationSelectScreen({ user, online, onTuneIn, onLogout, onManage
         online={online}
         keys="↑/↓ · enter tune in · n my stations · esc log out · Q quit"
       />
+
+      {update ? (
+        <Box paddingX={1}>
+          <Text color={accent}>↑ xmit v{update} available</Text>
+          <Text color={theme.dim}>{'  ·  brew upgrade xmit · or re-run the install script'}</Text>
+        </Box>
+      ) : null}
 
       <Box flexGrow={1}>
         <Panel title="STATIONS" count={labels.length} accent={accent} focused grow>

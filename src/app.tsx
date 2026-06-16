@@ -11,6 +11,7 @@ import { logout } from './lib/auth.js'
 import { getGlobalChannel, hasAblyConfig } from './lib/ably.js'
 import { accentColor } from './lib/color.js'
 import { mpv } from './lib/mpv.js'
+import { checkForUpdate } from './lib/update.js'
 import type { Label, Screen, User } from './types/index.js'
 
 export function App(): React.ReactElement {
@@ -22,6 +23,7 @@ export function App(): React.ReactElement {
   const [label, setLabel] = useState<Label | null>(null)
   const [fatal, setFatal] = useState<string | null>(null)
   const [online, setOnline] = useState(0)
+  const [update, setUpdate] = useState<string | null>(null)
 
   // global presence: one shared channel drives the header's "N online"
   useEffect(() => {
@@ -74,6 +76,7 @@ export function App(): React.ReactElement {
     // mpv optional: playback disabled if absent
     mpv.start().catch(() => {})
     setBooting(false)
+    void checkForUpdate().then(setUpdate)
   }, [])
 
   const cols = stdout?.columns ?? 120
@@ -134,6 +137,7 @@ export function App(): React.ReactElement {
       <StationSelectScreen
         user={user}
         online={hasAblyConfig() ? online : undefined}
+        update={update}
         onTuneIn={(l) => {
           setLabel(l)
           setScreen('tunein')
