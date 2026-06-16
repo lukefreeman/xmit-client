@@ -8,15 +8,15 @@
 class Xmit < Formula
   desc "Underground terminal music station"
   homepage "https://github.com/lukefreeman/xmit-client"
-  version "0.1.0"
+  version "0.1.2"
 
   on_macos do
     on_arm do
-      url "https://github.com/lukefreeman/xmit-client/releases/download/v0.1.0/xmit-macos-arm64.zip"
+      url "https://github.com/lukefreeman/xmit-client/releases/download/v0.1.2/xmit-macos-arm64.zip"
       sha256 "REPLACE_WITH_ARM64_SHA256"
     end
     on_intel do
-      url "https://github.com/lukefreeman/xmit-client/releases/download/v0.1.0/xmit-macos-x64.zip"
+      url "https://github.com/lukefreeman/xmit-client/releases/download/v0.1.2/xmit-macos-x64.zip"
       sha256 "REPLACE_WITH_X64_SHA256"
     end
   end
