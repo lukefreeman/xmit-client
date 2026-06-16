@@ -89,7 +89,7 @@ export function StationSelectScreen({ user, online, update, onTuneIn, onLogout, 
       {update ? (
         <Box paddingX={1}>
           <Text color={accent}>↑ xmit v{update} available</Text>
-          <Text color={theme.dim}>{'  ·  brew upgrade xmit · or re-run the install script'}</Text>
+          <Text color={theme.dim}>{'  ·  curl -fsSL https://raw.githubusercontent.com/lukefreeman/xmit-client/main/packaging/install.sh | sh  ·  or https://xmit.netlify.app/'}</Text>
         </Box>
       ) : null}
 
