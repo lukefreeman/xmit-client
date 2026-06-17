@@ -8,6 +8,12 @@ import { logDebug } from './debug.js'
 const REALTIME_REQUEST_TIMEOUT = 20_000
 const TOKEN_FETCH_TIMEOUT = 15_000
 
+// Reconnect faster on flaky/restrictive networks (public WiFi, captive portals
+// you eventually pass) so presence/chat recovers promptly once the network is
+// usable again. Defaults are 15s/30s; these are tighter but not aggressive.
+const DISCONNECTED_RETRY_TIMEOUT = 8_000
+const SUSPENDED_RETRY_TIMEOUT = 15_000
+
 // server mode: XMIT_SERVER_URL set, token server auth. key mode: ABLY_API_KEY direct.
 const serverUrl = (): string | undefined => process.env.XMIT_SERVER_URL?.replace(/\/+$/, '')
 
@@ -66,6 +72,8 @@ export function getAblyClient(handle: string): Ably.Realtime {
       clientId: handle,
       echoMessages: true,
       realtimeRequestTimeout: REALTIME_REQUEST_TIMEOUT,
+      disconnectedRetryTimeout: DISCONNECTED_RETRY_TIMEOUT,
+      suspendedRetryTimeout: SUSPENDED_RETRY_TIMEOUT,
       authCallback: (_params, callback) => void requestToken(callback as AuthCb),
     })
   } else if (key) {
@@ -74,6 +82,8 @@ export function getAblyClient(handle: string): Ably.Realtime {
       clientId: handle,
       echoMessages: true,
       realtimeRequestTimeout: REALTIME_REQUEST_TIMEOUT,
+      disconnectedRetryTimeout: DISCONNECTED_RETRY_TIMEOUT,
+      suspendedRetryTimeout: SUSPENDED_RETRY_TIMEOUT,
     })
   } else {
     throw new Error('No Ably config — set XMIT_SERVER_URL or ABLY_API_KEY')

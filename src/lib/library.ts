@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js'
 import { oneLine } from './format.js'
-import type { Label, Release, Track, User } from '../types/index.js'
+import type { Label, Release, StorageProvider, Track, User } from '../types/index.js'
 
 export function slugify(name: string): string {
   return (
@@ -98,7 +98,14 @@ export async function deleteTrack(id: string): Promise<void> {
 export async function addTrack(
   owner: User,
   releaseId: string,
-  t: { title: string; audio_url: string; duration: number; track_number: number },
+  t: {
+    title: string
+    audio_url: string
+    duration: number
+    track_number: number
+    storage_provider?: StorageProvider
+    storage_key?: string | null
+  },
 ): Promise<Track> {
   const { data, error } = await supabase
     .from('tracks')
@@ -109,6 +116,8 @@ export async function addTrack(
       duration: t.duration,
       track_number: t.track_number,
       owner_id: owner.id,
+      storage_provider: t.storage_provider ?? 'r2',
+      storage_key: t.storage_key ?? null,
     })
     .select()
     .single()

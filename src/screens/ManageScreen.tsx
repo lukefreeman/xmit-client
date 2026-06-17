@@ -225,13 +225,15 @@ export function ManageScreen({ user, onExit }: Props): React.ReactElement {
         patch(i, { status: 'reading tags…' })
         const meta = await readAudioMeta(f)
         patch(i, { name: meta.title, status: 'uploading…' })
-        const url = await uploadAudio(user.id, station.slug, f)
+        const up = await uploadAudio(station.slug, f)
         n += 1
         await addTrack(user, release.id, {
           title: meta.title,
-          audio_url: url,
+          audio_url: up.url,
           duration: meta.duration,
           track_number: meta.trackNumber ?? n,
+          storage_provider: up.provider,
+          storage_key: up.key,
         })
         patch(i, { status: 'done ✓' })
       }
@@ -245,19 +247,42 @@ export function ManageScreen({ user, onExit }: Props): React.ReactElement {
     }
   }
 
+  // best-effort: remove the backing audio objects for these rows. Must be
+  // called with rows fetched BEFORE the DB delete — the cascade wipes the
+  // storage_key references. Never throws (deleteAudio is itself best-effort).
+  const purgeAudio = async (items: Array<Track | Release>): Promise<void> => {
+    await Promise.all(
+      items.map((it) =>
+        it.audio_url
+          ? deleteAudio({
+              audio_url: it.audio_url,
+              storage_provider: it.storage_provider,
+              storage_key: it.storage_key,
+            }).catch(() => {})
+          : Promise.resolve(),
+      ),
+    )
+  }
+
   const doDelete = async (c: Confirm): Promise<void> => {
     if (!c) return
     setBusy(true)
     setConfirm(null)
     try {
       if (c.kind === 'station' && station) {
+        // gather all audio under the station before the cascade wipes the rows
+        const rels = await fetchReleases(station.id)
+        const trackLists = await Promise.all(rels.map((r) => fetchTracks(r.id)))
         await deleteStation(station.id)
+        await purgeAudio([...rels, ...trackLists.flat()])
         await loadStations()
         setStation(null)
         setView('list')
         flash('station deleted')
       } else if (c.kind === 'release' && release && station) {
+        const trks = await fetchTracks(release.id)
         await deleteRelease(release.id)
+        await purgeAudio([release, ...trks])
         await loadReleases(station.id)
         setRelease(null)
         setView('station')
@@ -266,7 +291,7 @@ export function ManageScreen({ user, onExit }: Props): React.ReactElement {
         const t = tracks[trackIdx]
         if (t) {
           await deleteTrack(t.id)
-          await deleteAudio(t.audio_url)
+          await deleteAudio(t)
           await loadTracks(release.id)
           await loadReleases(station!.id)
           setTrackIdx((i) => Math.max(0, Math.min(i, tracks.length - 2)))
