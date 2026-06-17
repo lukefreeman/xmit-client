@@ -11,6 +11,7 @@ import type { Label, User } from '../types/index.js'
 interface Props {
   user: User
   online?: number
+  realtimeOffline?: boolean // realtime connection down → presence/chat degraded
   update?: string | null // newer version available, if any
   onTuneIn: (label: Label) => void
   onLogout: () => void
@@ -18,7 +19,7 @@ interface Props {
   onQuit: () => void
 }
 
-export function StationSelectScreen({ user, online, update, onTuneIn, onLogout, onManage, onQuit }: Props): React.ReactElement {
+export function StationSelectScreen({ user, online, realtimeOffline, update, onTuneIn, onLogout, onManage, onQuit }: Props): React.ReactElement {
   const { stdout } = useStdout()
   const rows = stdout?.rows ?? 30
   const accent = accentColor(theme.accent)
@@ -85,6 +86,13 @@ export function StationSelectScreen({ user, online, update, onTuneIn, onLogout, 
         online={online}
         keys="↑/↓ · enter tune in · n my stations · esc log out · Q quit"
       />
+
+      {realtimeOffline ? (
+        <Box paddingX={1}>
+          <Text color={theme.error}>○ realtime offline</Text>
+          <Text color={theme.dim}>{'  ·  presence & chat unavailable — live counts may be wrong'}</Text>
+        </Box>
+      ) : null}
 
       {update ? (
         <Box paddingX={1}>

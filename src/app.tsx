@@ -8,7 +8,7 @@ import { ManageScreen } from './screens/ManageScreen.js'
 import { theme, MIN_COLS, MIN_ROWS } from './theme.js'
 import { hasSupabaseConfig } from './lib/supabase.js'
 import { logout } from './lib/auth.js'
-import { getGlobalChannel, hasAblyConfig } from './lib/ably.js'
+import { getGlobalChannel, hasAblyConfig, subscribeRealtimeStatus, type RealtimeStatus } from './lib/ably.js'
 import { accentColor } from './lib/color.js'
 import { mpv } from './lib/mpv.js'
 import { checkForUpdate } from './lib/update.js'
@@ -23,12 +23,25 @@ export function App(): React.ReactElement {
   const [label, setLabel] = useState<Label | null>(null)
   const [fatal, setFatal] = useState<string | null>(null)
   const [online, setOnline] = useState(0)
+  const [realtime, setRealtime] = useState<RealtimeStatus>('connecting')
   const [update, setUpdate] = useState<string | null>(null)
+
+  // track realtime connection status so the UI can show a degraded indicator
+  // instead of mistaking a dead connection for "nobody online"
+  useEffect(() => {
+    if (!user || !hasAblyConfig()) return
+    return subscribeRealtimeStatus(user.handle, setRealtime)
+  }, [user])
 
   // global presence: one shared channel drives the header's "N online"
   useEffect(() => {
     if (!user || !hasAblyConfig()) return
-    const channel = getGlobalChannel(user.handle)
+    let channel: ReturnType<typeof getGlobalChannel>
+    try {
+      channel = getGlobalChannel(user.handle)
+    } catch {
+      return // realtime unavailable → header just shows no presence
+    }
     let active = true
     const refresh = async (): Promise<void> => {
       try {
@@ -137,6 +150,7 @@ export function App(): React.ReactElement {
       <StationSelectScreen
         user={user}
         online={hasAblyConfig() ? online : undefined}
+        realtimeOffline={hasAblyConfig() && realtime === 'offline'}
         update={update}
         onTuneIn={(l) => {
           setLabel(l)

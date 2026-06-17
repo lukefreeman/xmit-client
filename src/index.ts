@@ -5,6 +5,7 @@ import { App } from './app.js'
 import { mpv } from './lib/mpv.js'
 import { closeAbly } from './lib/ably.js'
 import { wipeSessions } from './lib/session.js'
+import { logDebug } from './lib/debug.js'
 import { theme } from './theme.js'
 
 const ALT_SCREEN_ON = '\x1b[?1049h'
@@ -36,6 +37,25 @@ function cleanup(): void {
   if (isTTY) process.stdout.write(RESET_COLORS + ALT_SCREEN_OFF + SHOW_CURSOR)
 }
 
+// Graceful degradation is load-bearing: a stray rejection from the OPTIONAL
+// realtime/presence layer (e.g. Ably's ~10s connection timeout firing from
+// inside the library, past our try/catch) must NOT kill the app. Bun would
+// otherwise terminate the process on an unhandled rejection. Log and continue.
+process.on('unhandledRejection', (reason) => {
+  logDebug('unhandledRejection', reason)
+})
+
+// An uncaught exception is genuinely unrecoverable. Restore the terminal BEFORE
+// printing, otherwise the trace lands in the alt-screen buffer and is wiped on
+// exit — which reads as a silent exit (notably in Warp, which clears it).
+process.on('uncaughtException', (err) => {
+  logDebug('uncaughtException', err)
+  cleanup()
+  // eslint-disable-next-line no-console
+  console.error('\nxmit crashed:\n', err instanceof Error ? (err.stack ?? err.message) : err)
+  process.exit(1)
+})
+
 const { waitUntilExit } = render(React.createElement(App), {
   exitOnCtrlC: true,
 })
@@ -52,7 +72,10 @@ waitUntilExit()
     cleanup()
     process.exit(0)
   })
-  .catch(() => {
+  .catch((err) => {
+    logDebug('render', err)
     cleanup()
+    // eslint-disable-next-line no-console
+    console.error('\nxmit crashed:\n', err instanceof Error ? (err.stack ?? err.message) : err)
     process.exit(1)
   })
