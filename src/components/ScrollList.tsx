@@ -22,9 +22,10 @@ export function ScrollList({ rows, selectedIndex = 0, follow = 'selection', acce
   })
 
   const total = rows.length
-  const overflow = height > 0 && total > height
+  const measured = height > 0
+  const overflow = measured && total > height
   // reserve a row top and bottom for the indicators when overflowing
-  const cap = overflow ? Math.max(1, height - 2) : Math.max(1, height || total)
+  const cap = overflow ? Math.max(1, height - 2) : measured ? height : 0
 
   let start = 0
   if (overflow) {
@@ -34,7 +35,9 @@ export function ScrollList({ rows, selectedIndex = 0, follow = 'selection', acce
       start = Math.min(Math.max(0, selectedIndex - Math.floor(cap / 2)), total - cap)
     }
   }
-  const visible = rows.slice(start, start + cap)
+  // until the viewport height is known, render nothing — the flexGrow box still
+  // measures correctly, and this avoids a transient full-list frame on mount
+  const visible = measured ? rows.slice(start, start + cap) : []
   const above = start
   const below = total - (start + cap)
 

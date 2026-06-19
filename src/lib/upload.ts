@@ -28,6 +28,7 @@ export interface UploadResult {
   url: string // public CDN URL to store in audio_url
   key: string // object key within the bucket
   provider: StorageProvider
+  bytes: number // file size, recorded for the per-user storage quota
 }
 
 // Upload via the token server: request a presigned R2 PUT URL, then PUT the
@@ -65,7 +66,7 @@ export async function uploadAudio(slug: string, filePath: string): Promise<Uploa
   })
   if (!putRes.ok) throw new Error(`upload to storage failed (${putRes.status})`)
 
-  return { url: publicUrl, key, provider: 'r2' }
+  return { url: publicUrl, key, provider: 'r2', bytes: data.byteLength }
 }
 
 interface Deletable {

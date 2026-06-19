@@ -66,10 +66,14 @@ async function requestToken(callback: AuthCb): Promise<void> {
 
 export function getAblyClient(handle: string): Ably.Realtime {
   if (client) return client
+  // clientId must match the server-minted token's clientId, which is derived
+  // from the lowercased synthetic email — so normalize here too. Display names
+  // come from presence/chat data.handle (original case), not the clientId.
+  const clientId = handle.toLowerCase()
   const key = process.env.ABLY_API_KEY
   if (serverUrl()) {
     client = new Ably.Realtime({
-      clientId: handle,
+      clientId,
       echoMessages: true,
       realtimeRequestTimeout: REALTIME_REQUEST_TIMEOUT,
       disconnectedRetryTimeout: DISCONNECTED_RETRY_TIMEOUT,
@@ -79,7 +83,7 @@ export function getAblyClient(handle: string): Ably.Realtime {
   } else if (key) {
     client = new Ably.Realtime({
       key,
-      clientId: handle,
+      clientId,
       echoMessages: true,
       realtimeRequestTimeout: REALTIME_REQUEST_TIMEOUT,
       disconnectedRetryTimeout: DISCONNECTED_RETRY_TIMEOUT,

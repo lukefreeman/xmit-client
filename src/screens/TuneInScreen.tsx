@@ -262,7 +262,7 @@ export function TuneInScreen({ user, label, onLeave, onQuit }: Props): React.Rea
   const NOW_PLAYING_ROWS = 8
 
   return (
-    <Box flexDirection="column" height={rows - 1}>
+    <Box flexDirection="column" height={rows - 1} overflow="hidden">
       <StatusBar
         title={label.name.toUpperCase()}
         handle={user.handle}

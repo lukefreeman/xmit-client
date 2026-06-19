@@ -30,8 +30,7 @@ export function TracksPanel({
   const rows = tracks.map((t, i) => {
     const active = i === index
     const playing = t.id === playingId
-    const num = t.track_number.toString().padStart(2, '0')
-    const line = padRow(width, `${playing ? '♪' : ' '} ${num} · ${t.title}`, fmtTime(t.duration))
+    const line = padRow(width, `${playing ? '♪' : ' '} ${t.title}`, fmtTime(t.duration))
     if (active) {
       return (
         <Text key={t.id} backgroundColor={accent} color={theme.bg} bold wrap="truncate-end">

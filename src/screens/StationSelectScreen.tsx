@@ -78,7 +78,7 @@ export function StationSelectScreen({ user, online, realtimeOffline, update, onT
   })
 
   return (
-    <Box flexDirection="column" height={rows - 1} paddingX={1}>
+    <Box flexDirection="column" height={rows - 1} overflow="hidden" paddingX={1}>
       <StatusBar
         title="XMIT / STATIONS"
         handle={user.handle}

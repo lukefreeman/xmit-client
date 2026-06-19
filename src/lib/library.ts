@@ -105,6 +105,7 @@ export async function addTrack(
     track_number: number
     storage_provider?: StorageProvider
     storage_key?: string | null
+    bytes?: number
   },
 ): Promise<Track> {
   const { data, error } = await supabase
@@ -118,6 +119,7 @@ export async function addTrack(
       owner_id: owner.id,
       storage_provider: t.storage_provider ?? 'r2',
       storage_key: t.storage_key ?? null,
+      bytes: t.bytes ?? 0,
     })
     .select()
     .single()

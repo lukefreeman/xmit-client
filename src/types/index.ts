@@ -1,6 +1,7 @@
 export interface User {
   id: string
   handle: string
+  canPublish: boolean // may create stations/releases/upload (gated by invite)
 }
 
 export interface Label {

@@ -22,12 +22,14 @@ import {
 } from '../lib/library.js'
 import { findAudioFiles, readAudioMeta } from '../lib/metadata.js'
 import { uploadAudio, deleteAudio } from '../lib/upload.js'
+import { redeemInvite } from '../lib/auth.js'
 import { accentColor } from '../lib/color.js'
 import type { Label, Release, Track, User } from '../types/index.js'
 
 const MAX_TRACKS_PER_RELEASE = 10
 
 type View =
+  | 'gate'
   | 'list'
   | 'newStation'
   | 'editStation'
@@ -53,7 +55,9 @@ const msg = (e: unknown): string => (e instanceof Error ? e.message : String(e))
 
 export function ManageScreen({ user, onExit }: Props): React.ReactElement {
   const { stdout } = useStdout()
-  const [view, setView] = useState<View>('list')
+  const [canPublish, setCanPublish] = useState(user.canPublish)
+  const [view, setView] = useState<View>(user.canPublish ? 'list' : 'gate')
+  const [code, setCode] = useState('')
   const [stations, setStations] = useState<Label[]>([])
   const [stationIdx, setStationIdx] = useState(0)
   const [station, setStation] = useState<Label | null>(null)
@@ -100,12 +104,33 @@ export function ManageScreen({ user, onExit }: Props): React.ReactElement {
   }
 
   useEffect(() => {
-    void loadStations()
+    if (canPublish) void loadStations()
   }, [])
 
   const flash = (m: string): void => {
     setInfo(m)
     setError(null)
+  }
+
+  const submitCode = async (): Promise<void> => {
+    if (busy) return
+    if (!code.trim()) {
+      setError('Enter an invite code')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await redeemInvite(code)
+      setCanPublish(true)
+      setView('list')
+      await loadStations()
+      flash('publishing unlocked — welcome aboard')
+    } catch (e) {
+      setError(msg(e))
+    } finally {
+      setBusy(false)
+    }
   }
 
   const submitStation = async (): Promise<void> => {
@@ -234,6 +259,7 @@ export function ManageScreen({ user, onExit }: Props): React.ReactElement {
           track_number: meta.trackNumber ?? n,
           storage_provider: up.provider,
           storage_key: up.key,
+          bytes: up.bytes,
         })
         patch(i, { status: 'done ✓' })
       }
@@ -327,7 +353,7 @@ export function ManageScreen({ user, onExit }: Props): React.ReactElement {
     if (key.escape) {
       setError(null)
       setInfo(null)
-      if (view === 'list') onExit()
+      if (view === 'list' || view === 'gate') onExit()
       else if (view === 'newStation' || view === 'editStation') setView(editing ? 'station' : 'list')
       else if (view === 'station') {
         setStation(null)
@@ -424,7 +450,8 @@ export function ManageScreen({ user, onExit }: Props): React.ReactElement {
   const rows = stdout?.rows ?? 30
 
   let title = 'MY STATIONS'
-  if (view === 'newStation') title = 'NEW STATION'
+  if (view === 'gate') title = 'PUBLISHING ACCESS'
+  else if (view === 'newStation') title = 'NEW STATION'
   else if (view === 'editStation') title = 'EDIT STATION'
   else if (view === 'station' && station) title = station.name.toUpperCase()
   else if (view === 'newRelease') title = 'NEW RELEASE'
@@ -432,12 +459,30 @@ export function ManageScreen({ user, onExit }: Props): React.ReactElement {
     title = release.title.toUpperCase()
 
   return (
-    <Box flexDirection="column" height={rows - 1} paddingX={1}>
+    <Box flexDirection="column" height={rows - 1} overflow="hidden" paddingX={1}>
       <StatusBar title="XMIT / MY STATIONS" handle={user.handle} accent={accent} keys={keysFor(view, confirm)} />
 
       <Box flexGrow={1}>
         <Panel title={title} accent={accent} focused grow>
           <Box flexDirection="column" marginTop={1} flexGrow={1}>
+            {view === 'gate' && (
+              <Box flexDirection="column">
+                <Text color={theme.text}>Publishing is invite-only.</Text>
+                <Text color={theme.dim}>Listening is open to everyone — but creating stations and</Text>
+                <Text color={theme.dim}>uploading tracks needs an invite code.</Text>
+                <Box marginTop={1}>
+                  <Field label="invite code">
+                    <TextInput
+                      value={code}
+                      onChange={setCode}
+                      onSubmit={() => void submitCode()}
+                      focus={!busy}
+                      placeholder="XMIT-xxxxxxxx"
+                    />
+                  </Field>
+                </Box>
+              </Box>
+            )}
             {view === 'list' && <ListView stations={stations} idx={stationIdx} />}
             {(view === 'newStation' || view === 'editStation') && (
               <StationForm
@@ -498,6 +543,8 @@ export function ManageScreen({ user, onExit }: Props): React.ReactElement {
 function keysFor(view: View, confirm: Confirm): string {
   if (confirm) return 'y confirm · n cancel'
   switch (view) {
+    case 'gate':
+      return 'enter redeem invite · esc back'
     case 'list':
       return 'n new · ↑/↓ · enter manage · esc back'
     case 'newStation':
@@ -575,7 +622,7 @@ function ReleaseView({
   const rows = tracks.map((t, i) => (
     <Text key={t.id} color={i === idx ? accent : theme.muted} bold={i === idx} wrap="truncate-end">
       {i === idx ? '▶ ' : '  '}
-      {t.track_number.toString().padStart(2, '0')} · {t.title}
+      {t.title}
       <Text color={theme.dim}> {fmtTime(t.duration)}</Text>
     </Text>
   ))

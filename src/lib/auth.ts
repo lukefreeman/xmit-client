@@ -14,9 +14,17 @@ function assertConfig(): void {
   }
 }
 
-async function profileHandle(id: string, fallback: string): Promise<string> {
-  const { data } = await supabase.from('profiles').select('handle').eq('id', id).single()
-  return data?.handle ?? fallback
+async function profileInfo(id: string, fallbackHandle: string): Promise<{ handle: string; canPublish: boolean }> {
+  const { data } = await supabase.from('profiles').select('handle, can_publish').eq('id', id).single()
+  return { handle: data?.handle ?? fallbackHandle, canPublish: Boolean(data?.can_publish) }
+}
+
+// Redeem an invite code to unlock publishing for the signed-in user.
+// Throws with a human-readable message on any failure.
+export async function redeemInvite(code: string): Promise<void> {
+  const { data, error } = await supabase.rpc('redeem_invite', { invite_code: code.trim() })
+  if (error) throw new Error(error.message || 'Could not redeem invite')
+  if (!data) throw new Error('Invalid invite code')
 }
 
 export async function register(handle: string, password: string): Promise<User> {
@@ -55,7 +63,8 @@ export async function register(handle: string, password: string): Promise<User> 
   if (!data.session) {
     await supabase.auth.signInWithPassword({ email: handleToEmail(handle), password })
   }
-  return { id: uid, handle }
+  // new accounts can listen but not publish until they redeem an invite
+  return { id: uid, handle, canPublish: false }
 }
 
 export async function login(handle: string, password: string): Promise<User> {
@@ -65,7 +74,8 @@ export async function login(handle: string, password: string): Promise<User> {
     password,
   })
   if (error || !data.user) throw new Error('Invalid handle or password')
-  return { id: data.user.id, handle: await profileHandle(data.user.id, handle) }
+  const info = await profileInfo(data.user.id, handle)
+  return { id: data.user.id, handle: info.handle, canPublish: info.canPublish }
 }
 
 export async function logout(): Promise<void> {
