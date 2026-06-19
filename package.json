@@ -1,6 +1,6 @@
 {
   "name": "xmit",
-  "version": "0.1.10",
+  "version": "0.1.13",
   "type": "module",
   "private": true,
   "description": "XMIT — an underground terminal music station. Tune into label stations, stream releases, see who's listening, chat live.",
